@@ -1,4 +1,5 @@
-name: Build Kivy ToDoApp APK
+name: Build Kivy ToDoApp AP
+
 
 on:
   push:
