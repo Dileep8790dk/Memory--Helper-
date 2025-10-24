@@ -1,72 +1,52 @@
-name: Build Kivy ToDoApp APK
+name: Build Kivy APK
 
 on:
   push:
     branches: [ main ]
+  workflow_dispatch:
 
 jobs:
-  build:
+  build-apk:
     runs-on: ubuntu-latest
-    timeout-minutes: 180
+    env:
+      ANDROID_HOME: ${{ runner.temp }}/android-sdk
+      ANDROID_SDK_ROOT: ${{ runner.temp }}/android-sdk
 
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
+    - name: Checkout Repo
+      uses: actions/checkout@v3
 
     - name: Set up Python
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v4
       with:
-        python-version: "3.10"
+        python-version: '3.10'
 
     - name: Install dependencies
       run: |
-        sudo apt update
-        sudo apt install -y build-essential git python3-pip zip unzip openjdk-17-jdk wget
+        sudo apt-get update
+        sudo apt-get install -y python3-pip git zip unzip openjdk-17-jdk build-essential wget
         pip install --upgrade pip
-        pip install buildozer cython
+        pip install cython==0.29.36 kivy==2.3.2 buildozer
 
-    - name: Install Android SDK tools manually (fixed structure + force licenses)
+    - name: Install Android SDK & Build-Tools
       run: |
-        mkdir -p $HOME/.buildozer/android/cmdline-tools
-        cd $HOME/.buildozer/android/cmdline-tools
-        wget https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip -O commandlinetools.zip
-        unzip -q commandlinetools.zip
-        rm commandlinetools.zip
-        mkdir -p $HOME/.buildozer/android/cmdline-tools/latest
-        mv cmdline-tools/* $HOME/.buildozer/android/cmdline-tools/latest/
-        export ANDROID_SDK_ROOT=$HOME/.buildozer/android
+        mkdir -p $ANDROID_SDK_ROOT/cmdline-tools
+        cd $ANDROID_SDK_ROOT/cmdline-tools
+        wget https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip -O cmdline-tools.zip
+        unzip cmdline-tools.zip
+        rm cmdline-tools.zip
+        mv cmdline-tools latest
+
         export PATH=$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$PATH
-
-        # Force license acceptance globally
-        yes | sdkmanager --sdk_root=$ANDROID_SDK_ROOT --licenses || true
-        yes | sdkmanager --sdk_root=$ANDROID_SDK_ROOT "platform-tools" "platforms;android-33" "build-tools;33.0.2"
-
-        # Create a default build-tools symlink so AIDL is found
-        mkdir -p $ANDROID_SDK_ROOT/build-tools
-        ln -sfn $ANDROID_SDK_ROOT/build-tools/33.0.2 $ANDROID_SDK_ROOT/build-tools/latest
-
-    - name: Verify SDK setup
-      run: |
-        ls -R $HOME/.buildozer/android/build-tools || true
-        which sdkmanager || echo "sdkmanager not found"
-        which aidl || echo "aidl not found"
-
-    - name: Ensure buildozer.spec exists
-      run: |
-        ls -la
-        if [ ! -f buildozer.spec ]; then
-          echo "buildozer.spec not found!"
-          exit 1
-        fi
+        yes | sdkmanager --sdk_root=$ANDROID_SDK_ROOT --licenses
+        yes | sdkmanager "platform-tools" "build-tools;36.1.0" "platforms;android-33"
 
     - name: Build APK
       run: |
-        export ANDROID_SDK_ROOT=$HOME/.buildozer/android
-        export PATH=$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$PATH
-        buildozer -v android debug
+        buildozer android debug
 
-    - name: Upload APK artifact
-      uses: actions/upload-artifact@v4
+    - name: Upload APK
+      uses: actions/upload-artifact@v3
       with:
-        name: ToDoApp-APK
+        name: Kivy-APK
         path: bin/*.apk
