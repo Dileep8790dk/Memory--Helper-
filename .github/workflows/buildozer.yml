@@ -3,7 +3,6 @@ name: Build Kivy ToDoApp APK
 on:
   push:
     branches: [ main ]
-  workflow_dispatch:
 
 jobs:
   build:
@@ -21,30 +20,49 @@ jobs:
 
     - name: Install dependencies
       run: |
-        sudo apt-get update
-        sudo apt-get install -y build-essential git python3-pip zip unzip openjdk-17-jdk wget
+        sudo apt update
+        sudo apt install -y build-essential git python3-pip zip unzip openjdk-17-jdk wget
         pip install --upgrade pip
         pip install buildozer cython
 
-    - name: Install Android SDK tools manually (fixed structure)
+    - name: Install Android SDK tools manually (fixed structure + force licenses)
       run: |
         mkdir -p $HOME/.buildozer/android/cmdline-tools
         cd $HOME/.buildozer/android/cmdline-tools
         wget https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip -O commandlinetools.zip
         unzip -q commandlinetools.zip
         rm commandlinetools.zip
-        # Move to correct structure (cmdline-tools/latest)
         mkdir -p $HOME/.buildozer/android/cmdline-tools/latest
         mv cmdline-tools/* $HOME/.buildozer/android/cmdline-tools/latest/
         export ANDROID_SDK_ROOT=$HOME/.buildozer/android
         export PATH=$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$PATH
-        yes | sdkmanager --licenses
-        yes | sdkmanager "platform-tools" "platforms;android-33" "build-tools;33.0.2"
+
+        # Force license acceptance globally
+        yes | sdkmanager --sdk_root=$ANDROID_SDK_ROOT --licenses || true
+        yes | sdkmanager --sdk_root=$ANDROID_SDK_ROOT "platform-tools" "platforms;android-33" "build-tools;33.0.2"
+
+        # Create a default build-tools symlink so AIDL is found
+        mkdir -p $ANDROID_SDK_ROOT/build-tools
+        ln -sfn $ANDROID_SDK_ROOT/build-tools/33.0.2 $ANDROID_SDK_ROOT/build-tools/latest
+
+    - name: Verify SDK setup
+      run: |
+        ls -R $HOME/.buildozer/android/build-tools || true
+        which sdkmanager || echo "sdkmanager not found"
+        which aidl || echo "aidl not found"
+
+    - name: Ensure buildozer.spec exists
+      run: |
+        ls -la
+        if [ ! -f buildozer.spec ]; then
+          echo "buildozer.spec not found!"
+          exit 1
+        fi
 
     - name: Build APK
       run: |
         export ANDROID_SDK_ROOT=$HOME/.buildozer/android
-        export PATH=$ANDROID_SDK_ROOT/platform-tools:$ANDROID_SDK_ROOT/build-tools/33.0.2:$PATH
+        export PATH=$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$PATH
         buildozer -v android debug
 
     - name: Upload APK artifact
