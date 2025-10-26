@@ -9,11 +9,14 @@ package.name = todoapp
 # (str) Package domain (needed for Android/iOS packaging)
 package.domain = org.test
 
-# (list) Application requirements
-# Add 'sqlite3' here because your app uses it via 'database.py'.
+# (str) Application versioning - FIX: Must be set
+version = 0.1
+
+# (list) Application requirements - FIX: Add sqlite3
 requirements = python3,kivy,sqlite3
 
-# (list) Permissions
-# Note: Kivy often requires INTERNET permission even if you don't explicitly use
-# networking, so it's a safe addition.
+# (str) Source code where the main.py lives - FIX: Points to your subfolder
+source.dir = ToDoApp
+
+# (list) Permissions - Safe to include INTERNET
 android.permissions = INTERNET
