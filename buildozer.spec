@@ -18,5 +18,8 @@ requirements = python3,kivy,sqlite3
 # (str) Source code where the main.py lives - Must point to your subfolder
 source.dir = ToDoApp
 
+# (str) Android NDK version. FIX: Locking to r21b prevents p4a errors on runners.
+android.ndk = 21b
+
 # (list) Permissions - Required for Android
 android.permissions = INTERNET
