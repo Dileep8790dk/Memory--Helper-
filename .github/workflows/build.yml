@@ -1,0 +1,42 @@
+# .github/workflows/android_build.yml
+
+name: Build Kivy APK
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+      # 1. Checkout Repository
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      # 2. FIX: Install libtinfo5 Dependency
+      # This fixes the "E: Unable to locate package libtinfo5" error.
+      - name: Install libtinfo5 Dependency Fix
+        run: |
+          echo "Installing legacy libtinfo5 package..."
+          wget http://security.ubuntu.com/ubuntu/pool/universe/n/ncurses/libtinfo5_6.3-2ubuntu0.1_amd64.deb
+          sudo dpkg -i libtinfo5_6.3-2ubuntu0.1_amd64.deb
+
+      # 3. Build the Android Debug APK using Buildozer
+      # CRITICAL FIX: The 'sh -c "..."' wrapper prevents the "Broken pipe" error 
+      # by forcing the runner to execute the pipe command correctly.
+      - name: Build Android Debug APK
+        uses: digreatbrian/buildozer-action@v2
+        with:
+          # This command combines the "yes |" fix and the "Broken Pipe" fix
+          buildozer-cmd: sh -c "yes | buildozer -v android debug"
+          python-version: 3.8
+
+      # 4. Upload the resulting APK file as a downloadable artifact
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ToDoApp-APK-Artifact
+          path: bin/*.apk
