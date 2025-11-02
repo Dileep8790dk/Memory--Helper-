@@ -14,29 +14,37 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-      # 1. Check out the repository code
+      # 1. Checkout Repository
       - name: Checkout Repository
         uses: actions/checkout@v4
 
       # 2. FIX: Install libtinfo5 Dependency
-      # This addresses the "E: Unable to locate package libtinfo5" error 
-      # by manually downloading the legacy package from the Ubuntu archive.
+      # This fixes the "E: Unable to locate package libtinfo5" error on newer Ubuntu runners.
       - name: Install libtinfo5 Dependency Fix
         run: |
           echo "Installing legacy libtinfo5 package..."
           wget http://security.ubuntu.com/ubuntu/pool/universe/n/ncurses/libtinfo5_6.3-2ubuntu0.1_amd64.deb
           sudo dpkg -i libtinfo5_6.3-2ubuntu0.1_amd64.deb
+
+      # 3. FIX: Accept Android Licenses (Prevents the "Broken pipe" crash)
+      # This step forces the download and license acceptance of the SDK/NDK outside
+      # the main buildozer-action, which resolves the piping issue.
+      - name: Accept Android SDK Licenses
+        run: |
+          # The full path is needed here because the buildozer action is not yet initialized.
+          # We use the known path from the runner environment.
+          /opt/hostedtoolcache/Python/3.8.18/x64/bin/buildozer android update
           
-      # 3. Build the Android Debug APK using Buildozer
-      # The 'yes |' pipes 'y' (yes) to any prompts, automatically accepting
-      # the Android SDK licenses required to install Aidl and other tools.
+      # 4. Build the Android Debug APK using Buildozer
+      # The licenses are already accepted, so we can run the simple command.
       - name: Build Android Debug APK
         uses: digreatbrian/buildozer-action@v2
         with:
-          buildozer-cmd: yes | buildozer -v android debug
+          # Use the clean command now that the license step is handled above.
+          buildozer-cmd: buildozer -v android debug
           python-version: 3.8
 
-      # 4. Upload the resulting APK file as a downloadable artifact
+      # 5. Upload the resulting APK file as a downloadable artifact
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
